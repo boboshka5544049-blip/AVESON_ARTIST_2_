@@ -11,47 +11,90 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # 1. Repository
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2. Java 17
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
+      # 3. Gradle 8.9
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
+      # 4. ZIP faylni ochish
       - name: Extract AVESON ARTIST 2.0
         run: |
           mkdir -p project
+
           unzip -o AVESON_ARTIST_2_0*.zip -d project
 
           echo "Finding Gradle project..."
+
           SETTINGS=$(find project -name settings.gradle -type f | head -n 1)
 
           if [ -z "$SETTINGS" ]; then
             echo "ERROR: settings.gradle not found"
-            find project -maxdepth 4 -type f | sort
+            echo "Repository files:"
+            find project -maxdepth 5 -type f | sort
             exit 1
           fi
 
           PROJECT_DIR=$(dirname "$SETTINGS")
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Found project at: $PROJECT_DIR"
 
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+          echo "Found project at:"
+          echo "$PROJECT_DIR"
+
+      # 5. AndroidX sozlamalarini avtomatik yaratish
+      - name: Create gradle.properties
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          cat > gradle.properties <<'EOF'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          EOF
+
+          echo "gradle.properties created:"
+          cat gradle.properties
+
+      # 6. Gradle projectni tekshirish
+      - name: Verify Android project
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          echo "Current directory:"
+          pwd
+
+          echo "Project files:"
+          find . -maxdepth 3 -type f | sort
+
+          echo "Gradle properties:"
+          cat gradle.properties
+
+      # 7. APK build
       - name: Build AVESON ARTIST 2.0
         working-directory: ${{ env.PROJECT_DIR }}
-        run: gradle :app:assembleDebug --stacktrace
+        run: |
+          gradle :app:assembleDebug --stacktrace
 
+      # 8. APK mavjudligini tekshirish
       - name: Check APK
         run: |
           test -f "${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk"
+
+          echo "APK successfully created:"
           ls -lh "${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk"
 
+      # 9. APKni Artifact sifatida chiqarish
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
