@@ -1,96 +1,1747 @@
-name: AVESON ARTIST 2.0 APK
+package com.aveson.artist;
 
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
+import android.app.Activity;
+import android.app.DatePickerDialog;
+import android.os.Bundle;
+import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.Space;
+import android.widget.TextView;
+import android.widget.Toast;
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+import java.util.Calendar;
+import java.util.Locale;
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+public class MainActivity extends Activity {
 
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
+    // ============================================================
+    // AVESON ARTIST 2.0 — COLOR SYSTEM
+    // ============================================================
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+    private final int BG = Color.rgb(5, 7, 17);
+    private final int SURFACE = Color.rgb(16, 20, 38);
+    private final int SURFACE_2 = Color.rgb(21, 26, 48);
 
-      - name: Extract AVESON ARTIST 2.0
-        run: |
-          mkdir -p project
+    private final int PURPLE = Color.rgb(139, 92, 246);
+    private final int BLUE = Color.rgb(56, 189, 248);
+    private final int GREEN = Color.rgb(74, 222, 128);
 
-          unzip -o AVESON_ARTIST_2_0*.zip -d project
+    private final int TEXT = Color.rgb(248, 250, 252);
+    private final int MUTED = Color.rgb(154, 164, 192);
 
-          echo "Finding Gradle project..."
+    private LinearLayout root;
 
-          SETTINGS=$(find project -name settings.gradle -type f | head -n 1)
+    // ============================================================
+    // BASIC TEXT
+    // ============================================================
 
-          if [ -z "$SETTINGS" ]; then
-            echo "ERROR: settings.gradle not found"
-            find project -maxdepth 5 -type f | sort
-            exit 1
-          fi
+    private TextView text(String value, float size, int color) {
 
-          PROJECT_DIR=$(dirname "$SETTINGS")
+        TextView view = new TextView(this);
 
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+        view.setText(value);
+        view.setTextSize(size);
+        view.setTextColor(color);
 
-          echo "Found project at:"
-          echo "$PROJECT_DIR"
+        return view;
+    }
 
-      - name: Add AndroidX Gradle Properties
-        working-directory: ${{ env.PROJECT_DIR }}
-        run: |
-          cat > gradle.properties <<'EOF'
-          android.useAndroidX=true
-          android.enableJetifier=true
-          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-          EOF
+    // ============================================================
+    // GRADIENT / ROUNDED BACKGROUND
+    // ============================================================
 
-          echo "gradle.properties:"
-          cat gradle.properties
+    private GradientDrawable background(int color, int radius) {
 
-      - name: Check Android Project
-        working-directory: ${{ env.PROJECT_DIR }}
-        run: |
-          echo "Project files:"
-          find . -maxdepth 4 -type f | sort
+        GradientDrawable drawable = new GradientDrawable();
 
-          echo "Checking Gradle:"
-          test -f settings.gradle
-          test -f build.gradle
-          test -f app/build.gradle
-          test -f gradle.properties
+        drawable.setColor(color);
+        drawable.setCornerRadius(radius);
 
-      - name: Build AVESON ARTIST 2.0
-        working-directory: ${{ env.PROJECT_DIR }}
-        run: |
-          gradle :app:assembleDebug --stacktrace
+        return drawable;
+    }
 
-      - name: Check APK
-        run: |
-          APK="${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk"
+    // ============================================================
+    // BUTTON
+    // ============================================================
 
-          if [ ! -f "$APK" ]; then
-            echo "ERROR: APK not found"
-            exit 1
-          fi
+    private Button button(String value, int color) {
 
-          echo "APK successfully created:"
-          ls -lh "$APK"
+        Button button = new Button(this);
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: AVESON-ARTIST-2.0-APK
-          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
+        button.setText(value);
+        button.setTextColor(TEXT);
+        button.setTextSize(13);
+        button.setAllCaps(false);
+
+        button.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        button.setBackground(
+                background(color, 55)
+        );
+
+        return button;
+    }
+
+    // ============================================================
+    // EDIT TEXT
+    // ============================================================
+
+    private EditText input(String hint) {
+
+        EditText input = new EditText(this);
+
+        input.setHint(hint);
+        input.setHintTextColor(MUTED);
+        input.setTextColor(TEXT);
+
+        input.setTextSize(16);
+
+        input.setSingleLine(true);
+
+        input.setPadding(
+                18,
+                0,
+                18,
+                0
+        );
+
+        input.setBackground(
+                background(
+                        Color.rgb(13, 17, 34),
+                        55
+                )
+        );
+
+        input.setLayoutParams(
+                new LinearLayout.LayoutParams(
+                        -1,
+                        58
+                )
+        );
+
+        return input;
+    }
+
+    // ============================================================
+    // MAIN COLUMN
+    // ============================================================
+
+    private LinearLayout column() {
+
+        LinearLayout layout = new LinearLayout(this);
+
+        layout.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        layout.setPadding(
+                24,
+                20,
+                24,
+                24
+        );
+
+        layout.setBackgroundColor(BG);
+
+        return layout;
+    }
+
+    // ============================================================
+    // BIG HEADER
+    // ============================================================
+
+    private TextView header(String value) {
+
+        TextView view = text(
+                value,
+                28,
+                TEXT
+        );
+
+        view.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        view.setPadding(
+                0,
+                8,
+                0,
+                10
+        );
+
+        return view;
+    }
+
+    // ============================================================
+    // SUBTITLE
+    // ============================================================
+
+    private TextView subtitle(String value) {
+
+        TextView view = text(
+                value,
+                15,
+                MUTED
+        );
+
+        view.setPadding(
+                0,
+                0,
+                0,
+                16
+        );
+
+        return view;
+    }
+
+    // ============================================================
+    // SCREEN BASE
+    // ============================================================
+
+    private void base(
+            LinearLayout page,
+            boolean showBack
+    ) {
+
+        root = new LinearLayout(this);
+
+        root.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        root.setBackgroundColor(BG);
+
+        setContentView(root);
+
+        // BACK BAR
+        if (showBack) {
+
+            LinearLayout bar =
+                    new LinearLayout(this);
+
+            bar.setGravity(
+                    Gravity.CENTER_VERTICAL
+            );
+
+            TextView back =
+                    text(
+                            "‹",
+                            40,
+                            TEXT
+                    );
+
+            back.setGravity(
+                    Gravity.CENTER
+            );
+
+            back.setOnClickListener(
+                    v -> home()
+            );
+
+            bar.addView(
+                    back,
+                    new LinearLayout.LayoutParams(
+                            55,
+                            65
+                    )
+            );
+
+            TextView logo =
+                    text(
+                            "AVESON",
+                            20,
+                            TEXT
+                    );
+
+            logo.setTypeface(
+                    Typeface.DEFAULT,
+                    Typeface.BOLD
+            );
+
+            bar.addView(logo);
+
+            root.addView(bar);
+        }
+
+        root.addView(
+                page,
+                new LinearLayout.LayoutParams(
+                        -1,
+                        0,
+                        1
+                )
+        );
+    }
+
+    // ============================================================
+    // APP START
+    // ============================================================
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+
+        super.onCreate(savedInstanceState);
+
+        login();
+    }
+
+    // ============================================================
+    // LOGIN
+    // ============================================================
+
+    private void login() {
+
+        root =
+                new LinearLayout(this);
+
+        root.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        root.setPadding(
+                34,
+                40,
+                34,
+                24
+        );
+
+        root.setBackgroundColor(BG);
+
+        setContentView(root);
+
+        // AVESON LOGO
+
+        TextView logo =
+                text(
+                        "AVESON",
+                        40,
+                        PURPLE
+                );
+
+        logo.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        root.addView(logo);
+
+        // TITLE
+
+        TextView title =
+                text(
+                        "Your Music.\nYour Global Stage.",
+                        29,
+                        TEXT
+                );
+
+        title.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        title.setPadding(
+                0,
+                24,
+                0,
+                8
+        );
+
+        root.addView(title);
+
+        // DESCRIPTION
+
+        root.addView(
+                subtitle(
+                        "One powerful workspace for your music business."
+                )
+        );
+
+        // SPACE
+
+        Space space =
+                new Space(this);
+
+        root.addView(
+                space,
+                new LinearLayout.LayoutParams(
+                        1,
+                        80
+                )
+        );
+
+        // EMAIL
+
+        EditText email =
+                input("Email");
+
+        root.addView(email);
+
+        // PASSWORD
+
+        EditText password =
+                input("Password");
+
+        password.setInputType(0x81);
+
+        root.addView(password);
+
+        // SIGN IN
+
+        Button signIn =
+                button(
+                        "SIGN IN  →",
+                        PURPLE
+                );
+
+        root.addView(
+                signIn,
+                new LinearLayout.LayoutParams(
+                        -1,
+                        60
+                )
+        );
+
+        // CREATE ACCOUNT
+
+        Button create =
+                button(
+                        "CREATE ARTIST ACCOUNT",
+                        SURFACE_2
+                );
+
+        root.addView(
+                create,
+                new LinearLayout.LayoutParams(
+                        -1,
+                        60
+                )
+        );
+
+        // FOOTER
+
+        root.addView(
+                subtitle(
+                        "Secure • Global Distribution • Royalty Management"
+                )
+        );
+
+        // LOGIN ACTION
+
+        signIn.setOnClickListener(
+                v -> {
+
+                    String mail =
+                            email.getText()
+                                    .toString()
+                                    .trim();
+
+                    String pass =
+                            password.getText()
+                                    .toString();
+
+                    if (
+                            mail.contains("@")
+                                    &&
+                            pass.length() >= 6
+                    ) {
+
+                        home();
+
+                    } else {
+
+                        Toast.makeText(
+                                this,
+                                "Valid email and 6+ character password required",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    }
+                }
+        );
+
+        // CREATE ACCOUNT
+
+        create.setOnClickListener(
+                v -> {
+
+                    Toast.makeText(
+                            this,
+                            "Artist account creation will be connected to the AVESON backend.",
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
+        );
+    }
+
+    // ============================================================
+    // HOME
+    // ============================================================
+
+    private void home() {
+
+        LinearLayout page =
+                column();
+
+        base(
+                page,
+                false
+        );
+
+        TextView logo =
+                text(
+                        "AVESON  •  ARTIST",
+                        18,
+                        PURPLE
+                );
+
+        logo.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        page.addView(logo);
+
+        TextView welcome =
+                text(
+                        "Welcome back 👋",
+                        30,
+                        TEXT
+                );
+
+        welcome.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        welcome.setPadding(
+                0,
+                14,
+                0,
+                18
+        );
+
+        page.addView(welcome);
+
+        // METRICS
+
+        card(
+                page,
+                "TOTAL STREAMS",
+                "128,540",
+                GREEN
+        );
+
+        card(
+                page,
+                "EARNINGS",
+                "$1,284.60",
+                BLUE
+        );
+
+        card(
+                page,
+                "ACTIVE RELEASES",
+                "0",
+                BLUE
+        );
+
+        card(
+                page,
+                "TOP COUNTRY",
+                "Uzbekistan",
+                BLUE
+        );
+
+        // WORKFLOW
+
+        card(
+                page,
+                "RELEASE WORKFLOW",
+                "Submit music, check standards and track review.",
+                GREEN
+        );
+
+        // ACTIVITY
+
+        page.addView(
+                text(
+                        "Recent Activity",
+                        21,
+                        TEXT
+                )
+        );
+
+        page.addView(
+                subtitle(
+                        "• Draft saved — Midnight\n" +
+                        "• Royalty update — Statement ready\n" +
+                        "• Audience — Growth this month"
+                )
+        );
+
+        nav(
+                page,
+                0
+        );
+    }
+
+    // ============================================================
+    // CARD
+    // ============================================================
+
+    private void card(
+            LinearLayout parent,
+            String title,
+            String value,
+            int accent
+    ) {
+
+        LinearLayout card =
+                new LinearLayout(this);
+
+        card.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        card.setPadding(
+                20,
+                16,
+                20,
+                16
+        );
+
+        card.setBackground(
+                background(
+                        SURFACE,
+                        36
+                )
+        );
+
+        int height;
+
+        if (value.length() > 20) {
+
+            height = 132;
+
+        } else {
+
+            height = 108;
+        }
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        height
+                );
+
+        params.setMargins(
+                0,
+                0,
+                0,
+                12
+        );
+
+        card.setLayoutParams(params);
+
+        TextView titleView =
+                text(
+                        title,
+                        13,
+                        MUTED
+                );
+
+        titleView.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        card.addView(titleView);
+
+        TextView valueView =
+                text(
+                        value,
+                        27,
+                        TEXT
+                );
+
+        valueView.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        card.addView(valueView);
+
+        TextView open =
+                text(
+                        "OPEN →",
+                        13,
+                        accent
+                );
+
+        open.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        card.addView(open);
+
+        parent.addView(card);
+    }
+
+    // ============================================================
+    // BOTTOM NAVIGATION
+    // ============================================================
+
+    private void nav(
+            LinearLayout page,
+            int selected
+    ) {
+
+        Space space =
+                new Space(this);
+
+        page.addView(
+                space,
+                new LinearLayout.LayoutParams(
+                        1,
+                        0,
+                        1
+                )
+        );
+
+        LinearLayout navigation =
+                new LinearLayout(this);
+
+        navigation.setPadding(
+                6,
+                6,
+                6,
+                6
+        );
+
+        navigation.setBackground(
+                background(
+                        Color.rgb(10, 13, 27),
+                        48
+                )
+        );
+
+        String[] items = {
+                "HOME",
+                "MUSIC",
+                "+",
+                "ANALYTICS",
+                "MORE"
+        };
+
+        for (int i = 0; i < items.length; i++) {
+
+            final int index = i;
+
+            Button navButton =
+                    button(
+                            items[i],
+                            i == selected
+                                    ? PURPLE
+                                    : SURFACE_2
+                    );
+
+            navButton.setTextSize(
+                    i == 2 ? 22 : 11
+            );
+
+            navigation.addView(
+                    navButton,
+                    new LinearLayout.LayoutParams(
+                            0,
+                            58,
+                            1
+                    )
+            );
+
+            navButton.setOnClickListener(
+                    v -> {
+
+                        if (index == 0) {
+
+                            home();
+
+                        } else if (index == 1) {
+
+                            music();
+
+                        } else if (index == 2) {
+
+                            newRelease();
+
+                        } else if (index == 3) {
+
+                            analytics();
+
+                        } else {
+
+                            more();
+                        }
+                    }
+            );
+        }
+
+        page.addView(navigation);
+    }
+
+    // ============================================================
+    // MUSIC
+    // ============================================================
+
+    private void music() {
+
+        LinearLayout page =
+                column();
+
+        base(
+                page,
+                true
+        );
+
+        page.addView(
+                header("Music")
+        );
+
+        page.addView(
+                subtitle(
+                        "All releases, drafts and delivery status."
+                )
+        );
+
+        Button newRelease =
+                button(
+                        "+  NEW RELEASE",
+                        PURPLE
+                );
+
+        page.addView(
+                newRelease,
+                new LinearLayout.LayoutParams(
+                        -1,
+                        58
+                )
+        );
+
+        newRelease.setOnClickListener(
+                v -> newRelease()
+        );
+
+        releaseItem(
+                page,
+                "MIDNIGHT",
+                "Single • Draft"
+        );
+
+        releaseItem(
+                page,
+                "NO SIGNAL",
+                "EP • Pending"
+        );
+
+        releaseItem(
+                page,
+                "NEON HEART",
+                "Single • Released"
+        );
+
+        nav(
+                page,
+                1
+        );
+    }
+
+    // ============================================================
+    // RELEASE ITEM
+    // ============================================================
+
+    private void releaseItem(
+            LinearLayout parent,
+            String title,
+            String status
+    ) {
+
+        Button item =
+                button(
+                        title + "\n" + status,
+                        SURFACE
+                );
+
+        item.setGravity(
+                Gravity.LEFT |
+                Gravity.CENTER_VERTICAL
+        );
+
+        parent.addView(
+                item,
+                new LinearLayout.LayoutParams(
+                        -1,
+                        82
+                )
+        );
+
+        item.setOnClickListener(
+                v -> {
+
+                    Toast.makeText(
+                            this,
+                            title + " — " + status,
+                            Toast.LENGTH_SHORT
+                    ).show();
+                }
+        );
+    }
+
+    // ============================================================
+    // NEW RELEASE
+    // ============================================================
+
+    private void newRelease() {
+
+        LinearLayout page =
+                column();
+
+        base(
+                page,
+                true
+        );
+
+        page.addView(
+                header("New Release")
+        );
+
+        page.addView(
+                subtitle(
+                        "Build your release and submit it for AVESON review."
+                )
+        );
+
+        // RELEASE TITLE
+
+        page.addView(
+                input("Release title")
+        );
+
+        // PRIMARY ARTIST
+
+        page.addView(
+                input("Primary artist")
+        );
+
+        // FEATURING
+
+        page.addView(
+                input("Featuring artist (optional)")
+        );
+
+        // GENRE
+
+        page.addView(
+                input("Genre")
+        );
+
+        // LANGUAGE
+
+        page.addView(
+                input("Language")
+        );
+
+        // RELEASE DATE
+
+        LinearLayout dateRow =
+                new LinearLayout(this);
+
+        EditText releaseDate =
+                input(
+                        "Release date YYYY-MM-DD"
+                );
+
+        dateRow.addView(
+                releaseDate,
+                new LinearLayout.LayoutParams(
+                        0,
+                        58,
+                        1
+                )
+        );
+
+        Button calendar =
+                button(
+                        "📅",
+                        SURFACE_2
+                );
+
+        dateRow.addView(
+                calendar,
+                new LinearLayout.LayoutParams(
+                        64,
+                        58
+                )
+        );
+
+        page.addView(dateRow);
+
+        page.addView(
+                subtitle(
+                        "Calendar or keyboard. Past dates are blocked."
+                )
+        );
+
+        calendar.setOnClickListener(
+                v -> {
+
+                    Calendar current =
+                            Calendar.getInstance();
+
+                    DatePickerDialog picker =
+                            new DatePickerDialog(
+                                    this,
+                                    (
+                                            dialog,
+                                            year,
+                                            month,
+                                            day
+                                    ) -> {
+
+                                        String value =
+                                                String.format(
+                                                        Locale.US,
+                                                        "%04d-%02d-%02d",
+                                                        year,
+                                                        month + 1,
+                                                        day
+                                                );
+
+                                        releaseDate.setText(
+                                                value
+                                        );
+                                    },
+                                    current.get(
+                                            Calendar.YEAR
+                                    ),
+                                    current.get(
+                                            Calendar.MONTH
+                                    ),
+                                    current.get(
+                                            Calendar.DAY_OF_MONTH
+                                    )
+                            );
+
+                    picker.getDatePicker()
+                            .setMinDate(
+                                    System.currentTimeMillis() - 1000
+                            );
+
+                    picker.show();
+                }
+        );
+
+        // AUDIO
+
+        Button audio =
+                button(
+                        "🎵  SELECT AUDIO",
+                        SURFACE_2
+                );
+
+        page.addView(
+                audio,
+                new LinearLayout.LayoutParams(
+                        -1,
+                        58
+                )
+        );
+
+        audio.setOnClickListener(
+                v -> pickFile(
+                        "audio/*",
+                        10
+                )
+        );
+
+        // COVER
+
+        Button cover =
+                button(
+                        "🎨  SELECT COVER",
+                        SURFACE_2
+                );
+
+        page.addView(
+                cover,
+                new LinearLayout.LayoutParams(
+                        -1,
+                        58
+                )
+        );
+
+        cover.setOnClickListener(
+                v -> pickFile(
+                        "image/*",
+                        11
+                )
+        );
+
+        // LYRICS
+
+        page.addView(
+                input(
+                        "Lyrics (optional)"
+                )
+        );
+
+        // COPYRIGHT
+
+        page.addView(
+                input(
+                        "Copyright / rights owner"
+                )
+        );
+
+        // EXPLICIT
+
+        CheckBox explicit =
+                new CheckBox(this);
+
+        explicit.setText(
+                "Explicit content"
+        );
+
+        explicit.setTextColor(
+                TEXT
+        );
+
+        page.addView(explicit);
+
+        // FINAL REVIEW
+
+        Button review =
+                button(
+                        "FINAL REVIEW  →",
+                        PURPLE
+                );
+
+        page.addView(
+                review,
+                new LinearLayout.LayoutParams(
+                        -1,
+                        60
+                )
+        );
+
+        review.setOnClickListener(
+                v -> {
+
+                    Toast.makeText(
+                            this,
+                            "Release saved in AVESON ARTIST 2.0 prototype",
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
+        );
+
+        nav(
+                page,
+                2
+        );
+    }
+
+    // ============================================================
+    // FILE PICKER
+    // ============================================================
+
+    private void pickFile(
+            String type,
+            int requestCode
+    ) {
+
+        Intent intent =
+                new Intent(
+                        Intent.ACTION_OPEN_DOCUMENT
+                );
+
+        intent.addCategory(
+                Intent.CATEGORY_OPENABLE
+        );
+
+        intent.setType(type);
+
+        startActivityForResult(
+                intent,
+                requestCode
+        );
+    }
+
+    // ============================================================
+    // ANALYTICS
+    // ============================================================
+
+    private void analytics() {
+
+        LinearLayout page =
+                column();
+
+        base(
+                page,
+                true
+        );
+
+        page.addView(
+                header("Analytics")
+        );
+
+        page.addView(
+                subtitle(
+                        "Streams, listeners, countries, platforms and growth."
+                )
+        );
+
+        metric(
+                page,
+                "STREAMS",
+                "128,540"
+        );
+
+        metric(
+                page,
+                "LISTENERS",
+                "42,810"
+        );
+
+        metric(
+                page,
+                "FOLLOWERS",
+                "8,420"
+        );
+
+        metric(
+                page,
+                "TOP PLATFORM",
+                "Spotify"
+        );
+
+        metric(
+                page,
+                "TOP COUNTRY",
+                "Uzbekistan"
+        );
+
+        page.addView(
+                header("Growth")
+        );
+
+        page.addView(
+                subtitle(
+                        "Daily • Weekly • Monthly • Yearly\n" +
+                        "▁▂▃▂▄▅▆▇█"
+                )
+        );
+
+        nav(
+                page,
+                3
+        );
+    }
+
+    // ============================================================
+    // ANALYTICS METRIC
+    // ============================================================
+
+    private void metric(
+            LinearLayout parent,
+            String title,
+            String value
+    ) {
+
+        card(
+                parent,
+                title,
+                value,
+                GREEN
+        );
+    }
+
+    // ============================================================
+    // MORE
+    // ============================================================
+
+    private void more() {
+
+        LinearLayout page =
+                column();
+
+        base(
+                page,
+                true
+        );
+
+        page.addView(
+                header("More")
+        );
+
+        page.addView(
+                subtitle(
+                        "Your complete AVESON artist workspace."
+                )
+        );
+
+        String[][] modules = {
+
+                {
+                        "PLATFORMS",
+                        "DSP delivery and platform status"
+                },
+
+                {
+                        "VIDEO & CLIPS",
+                        "Video upload and analytics"
+                },
+
+                {
+                        "AUDIO STANDARDS",
+                        "AVESON audio requirements"
+                },
+
+                {
+                        "COVER STANDARDS",
+                        "AVESON artwork requirements"
+                },
+
+                {
+                        "RIGHTS",
+                        "Master, publishing, ownership and splits"
+                },
+
+                {
+                        "ROYALTIES",
+                        "Earnings, statements and payouts"
+                },
+
+                {
+                        "DISTRIBUTION",
+                        "Release delivery and territories"
+                },
+
+                {
+                        "AUDIENCE",
+                        "Fans, countries and insights"
+                },
+
+                {
+                        "MARKETING",
+                        "Campaigns and promotion"
+                },
+
+                {
+                        "PROFILE & SETTINGS",
+                        "Account and security"
+                },
+
+                {
+                        "LEGAL & DOCUMENTS",
+                        "Agreements and documents"
+                },
+
+                {
+                        "LANGUAGES",
+                        "Language preferences"
+                },
+
+                {
+                        "SUPPORT",
+                        "Help center and tickets"
+                }
+        };
+
+        for (
+                String[] module :
+                modules
+        ) {
+
+            Button item =
+                    button(
+                            module[0]
+                                    + "\n"
+                                    + module[1],
+                            SURFACE
+                    );
+
+            item.setGravity(
+                    Gravity.LEFT |
+                    Gravity.CENTER_VERTICAL
+            );
+
+            page.addView(
+                    item,
+                    new LinearLayout.LayoutParams(
+                            -1,
+                            72
+                    )
+            );
+
+            item.setOnClickListener(
+                    v -> info(module[0])
+            );
+        }
+
+        nav(
+                page,
+                4
+        );
+    }
+
+    // ============================================================
+    // MORE MODULE INFO
+    // ============================================================
+
+    private void info(String module) {
+
+        LinearLayout page =
+                column();
+
+        base(
+                page,
+                true
+        );
+
+        page.addView(
+                header(module)
+        );
+
+        String body =
+                "AVESON ARTIST 2.0 workspace module.\n\n" +
+                "Ready for backend integration.";
+
+        // AUDIO STANDARDS
+
+        if (
+                module.equals(
+                        "AUDIO STANDARDS"
+                )
+        ) {
+
+            body =
+                    "AVESON AUDIO STANDARDS\n\n" +
+
+                    "• WAV / FLAC\n" +
+                    "• 24-bit preferred\n" +
+                    "• 44.1 / 48 kHz\n" +
+                    "• Stereo\n\n" +
+
+                    "QUALITY\n" +
+                    "No clipping, distortion, silence " +
+                    "or corrupt audio files.\n\n" +
+
+                    "CONTENT\n" +
+                    "Submit only music you own or are " +
+                    "authorized to distribute.\n\n" +
+
+                    "Do not submit:\n" +
+                    "• Unlicensed copyrighted material\n" +
+                    "• Leaked/private material\n" +
+                    "• Test files\n" +
+                    "• Fake releases\n" +
+                    "• Misleading metadata\n" +
+                    "• Watermarked previews\n" +
+                    "• Music without distribution rights\n\n" +
+
+                    "METADATA\n" +
+                    "Title • Version • Primary Artist • " +
+                    "Featured Artist • Genre • Language • " +
+                    "Release Date • Explicit Status • " +
+                    "Songwriter • Producer • Contributors\n\n" +
+
+                    "IDENTIFIERS\n" +
+                    "ISRC • UPC / EAN";
+        }
+
+        // COVER STANDARDS
+
+        else if (
+                module.equals(
+                        "COVER STANDARDS"
+                )
+        ) {
+
+            body =
+                    "AVESON COVER STANDARDS\n\n" +
+
+                    "• Square 1:1\n" +
+                    "• 3000 × 3000 or larger preferred\n" +
+                    "• JPG / PNG\n" +
+                    "• RGB\n\n" +
+
+                    "ARTWORK\n" +
+                    "Use clean original artwork that " +
+                    "matches your release metadata.\n\n" +
+
+                    "AVOID\n" +
+                    "• Platform logos\n" +
+                    "• QR codes\n" +
+                    "• Phone numbers\n" +
+                    "• Email addresses\n" +
+                    "• Prices\n" +
+                    "• Advertising\n" +
+                    "• Misleading text\n" +
+                    "• Blurry images\n" +
+                    "• Pixelated images\n" +
+                    "• Screenshots\n\n" +
+
+                    "RIGHTS\n" +
+                    "You must have the rights to use " +
+                    "the artwork.";
+        }
+
+        // ROYALTIES
+
+        else if (
+                module.equals(
+                        "ROYALTIES"
+                )
+        ) {
+
+            body =
+                    "ROYALTIES\n\n" +
+
+                    "Total Earnings\n" +
+                    "Available Balance\n" +
+                    "Pending Earnings\n\n" +
+
+                    "Release Earnings\n" +
+                    "Platform Earnings\n" +
+                    "Statements\n" +
+                    "Payout History";
+        }
+
+        // RIGHTS
+
+        else if (
+                module.equals(
+                        "RIGHTS"
+                )
+        ) {
+
+            body =
+                    "RIGHTS MANAGEMENT\n\n" +
+
+                    "Master Rights\n" +
+                    "Publishing\n" +
+                    "Copyright Ownership\n" +
+                    "Ownership Splits\n" +
+                    "Songwriters\n" +
+                    "Contributors\n" +
+                    "Rights Documents";
+        }
+
+        // VIDEO
+
+        else if (
+                module.equals(
+                        "VIDEO & CLIPS"
+                )
+        ) {
+
+            body =
+                    "VIDEO & CLIPS\n\n" +
+
+                    "Separate video workspace.\n\n" +
+
+                    "• Video Upload\n" +
+                    "• Clips Upload\n" +
+                    "• Video Library\n" +
+                    "• Processing Status\n" +
+                    "• Video Analytics\n" +
+                    "• Distribution Status";
+        }
+
+        // PLATFORMS
+
+        else if (
+                module.equals(
+                        "PLATFORMS"
+                )
+        ) {
+
+            body =
+                    "PLATFORMS\n\n" +
+
+                    "Distribution destinations:\n\n" +
+
+                    "Spotify\n" +
+                    "Apple Music\n" +
+                    "YouTube Music\n" +
+                    "Amazon Music\n" +
+                    "Deezer\n" +
+                    "TIDAL\n" +
+                    "TikTok\n" +
+                    "Instagram / Facebook\n\n" +
+
+                    "Delivery and status tracking " +
+                    "will be connected to the AVESON backend.";
+        }
+
+        // DISTRIBUTION
+
+        else if (
+                module.equals(
+                        "DISTRIBUTION"
+                )
+        ) {
+
+            body =
+                    "DISTRIBUTION\n\n" +
+
+                    "Release delivery\n" +
+                    "Territories\n" +
+                    "Platform delivery\n" +
+                    "Release status\n" +
+                    "Delivery history\n" +
+                    "Global distribution";
+        }
+
+        // AUDIENCE
+
+        else if (
+                module.equals(
+                        "AUDIENCE"
+                )
+        ) {
+
+            body =
+                    "AUDIENCE\n\n" +
+
+                    "Listeners\n" +
+                    "Fans\n" +
+                    "Countries\n" +
+                    "Cities\n" +
+                    "Audience Growth\n" +
+                    "Demographics\n" +
+                    "Audience Insights";
+        }
+
+        // MARKETING
+
+        else if (
+                module.equals(
+                        "MARKETING"
+                )
+        ) {
+
+            body =
+                    "MARKETING\n\n" +
+
+                    "Release Promotion\n" +
+                    "Campaigns\n" +
+                    "Social Strategy\n" +
+                    "Playlist Strategy\n" +
+                    "International Promotion";
+        }
+
+        // PROFILE
+
+        else if (
+                module.equals(
+                        "PROFILE & SETTINGS"
+                )
+        ) {
+
+            body =
+                    "PROFILE & SETTINGS\n\n" +
+
+                    "Artist Profile\n" +
+                    "Account Settings\n" +
+                    "Notifications\n" +
+                    "Security\n" +
+                    "Password\n" +
+                    "Connected Accounts\n" +
+                    "Logout";
+        }
+
+        // LEGAL
+
+        else if (
+                module.equals(
+                        "LEGAL & DOCUMENTS"
+                )
+        ) {
+
+            body =
+                    "LEGAL & DOCUMENTS\n\n" +
+
+                    "Artist Agreement\n" +
+                    "Terms of Service\n" +
+                    "Privacy Policy\n" +
+                    "Copyright Information\n" +
+                    "Rights Documents";
+        }
+
+        // SUPPORT
+
+        else if (
+                module.equals(
+                        "SUPPORT"
+                )
+        ) {
+
+            body =
+                    "AVESON SUPPORT\n\n" +
+
+                    "Help Center\n" +
+                    "FAQ\n" +
+                    "Contact Support\n" +
+                    "Support Tickets";
+        }
+
+        // LANGUAGES
+
+        else if (
+                module.equals(
+                        "LANGUAGES"
+                )
+        ) {
+
+            body =
+                    "LANGUAGES\n\n" +
+
+                    "Language preferences\n\n" +
+
+                    "English\n" +
+                    "Uzbek\n" +
+                    "Russian\n" +
+                    "Turkish\n" +
+                    "Spanish\n" +
+                    "Other languages";
+        }
+
+        TextView bodyView =
+                text(
+                        body,
+                        16,
+                        TEXT
+                );
+
+        bodyView.setPadding(
+                0,
+                20,
+                0,
+                20
+        );
+
+        page.addView(bodyView);
+    }
+}
